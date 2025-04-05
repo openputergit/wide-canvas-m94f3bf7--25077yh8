@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Resume Builder</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        .clay-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 
+                8px 8px 16px rgba(174, 174, 192, 0.4),
+                -8px -8px 16px rgba(255, 255, 255, 0.8);
+        }
+        .clay-button {
+            background: #e0e5ec;
+            border-radius: 12px;
+            padding: 12px 24px;
+            box-shadow: 
+                6px 6px 12px rgba(174, 174, 192, 0.4),
+                -6px -6px 12px rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+        .clay-button:hover {
+            box-shadow: 
+                4px 4px 8px rgba(174, 174, 192, 0.4),
+                -4px -4px 8px rgba(255, 255, 255, 0.8);
+            transform: translateY(2px);
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-[#e0e5ec] min-h-screen p-4">
+    <div id="app" class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="clay-card mb-8">
+            <h1 class="text-3xl font-bold text-center text-gray-800">Resume Builder</h1>
+            <p class="text-center text-gray-600 mt-2">Create your professional resume in minutes</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Template Selection -->
+            <div class="clay-card">
+                <h2 class="text-xl font-semibold mb-4">Choose Template</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <template v-for="(template, index) in templates" :key="index">
+                        <div 
+                            class="cursor-pointer rounded-lg overflow-hidden relative"
+                            :class="{'ring-4 ring-blue-500': selectedTemplate === index}"
+                            @click="selectTemplate(index)">
+                            <img :src="template.preview" :alt="template.name" class="w-full h-40 object-cover">
+                            <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
+                                {{ template.name }}
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Form Section -->
+            <div class="clay-card">
+                <h2 class="text-xl font-semibold mb-4">Personal Information</h2>
+                <form @submit.prevent="saveResume" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input v-model="formData.fullName" type="text" class="mt-1 w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input v-model="formData.email" type="email" class="mt-1 w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Phone</label>
+                        <input v-model="formData.phone" type="tel" class="mt-1 w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Summary</label>
+                        <textarea v-model="formData.summary" rows="3" class="mt-1 w-full rounded-md border-gray-300 shadow-sm p-2"></textarea>
+                    </div>
+
+                    <!-- Experience Section -->
+                    <div class="space-y-2">
+                        <h3 class="text-lg font-medium">Experience</h3>
+                        <div v-for="(exp, index) in formData.experience" :key="index" class="space-y-2 p-4 bg-white rounded-lg">
+                            <input v-model="exp.company" placeholder="Company" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <input v-model="exp.position" placeholder="Position" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <input v-model="exp.duration" placeholder="Duration" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <textarea v-model="exp.description" placeholder="Description" rows="2" class="w-full rounded-md border-gray-300 shadow-sm p-2"></textarea>
+                            <button @click="removeExperience(index)" class="clay-button text-red-500">Remove</button>
+                        </div>
+                        <button @click="addExperience" type="button" class="clay-button w-full">Add Experience</button>
+                    </div>
+
+                    <!-- Education Section -->
+                    <div class="space-y-2">
+                        <h3 class="text-lg font-medium">Education</h3>
+                        <div v-for="(edu, index) in formData.education" :key="index" class="space-y-2 p-4 bg-white rounded-lg">
+                            <input v-model="edu.institution" placeholder="Institution" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <input v-model="edu.degree" placeholder="Degree" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <input v-model="edu.year" placeholder="Year" class="w-full rounded-md border-gray-300 shadow-sm p-2">
+                            <button @click="removeEducation(index)" class="clay-button text-red-500">Remove</button>
+                        </div>
+                        <button @click="addEducation" type="button" class="clay-button w-full">Add Education</button>
+                    </div>
+
+                    <button type="submit" class="clay-button w-full bg-blue-500 text-white">
+                        Generate Resume
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    selectedTemplate: 0,
+                    templates: [
+                        {
+                            name: 'Professional',
+                            preview: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8fHx8fHx8MTcwNjg4MTY5NA&ixlib=rb-4.0.3&q=80&w=1080'
+                        },
+                        {
+                            name: 'Creative',
+                            preview: 'https://images.unsplash.com/photo-1586282391129-76a6df230234?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8fHx8fHx8MTcwNjg4MTcwOQ&ixlib=rb-4.0.3&q=80&w=1080'
+                        },
+                        {
+                            name: 'Minimal',
+                            preview: 'https://images.unsplash.com/photo-1586282023078-d33bdc3dc429?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8fHx8fHx8MTcwNjg4MTcyMQ&ixlib=rb-4.0.3&q=80&w=1080'
+                        },
+                        {
+                            name: 'Modern',
+                            preview: 'https://images.unsplash.com/photo-1586282023555-as01ec4661c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8fHx8fHx8MTcwNjg4MTczMg&ixlib=rb-4.0.3&q=80&w=1080'
+                        }
+                    ],
+                    formData: {
+                        fullName: '',
+                        email: '',
+                        phone: '',
+                        summary: '',
+                        experience: [],
+                        education: []
+                    }
+                }
+            },
+            methods: {
+                selectTemplate(index) {
+                    this.selectedTemplate = index
+                },
+                addExperience() {
+                    this.formData.experience.push({
+                        company: '',
+                        position: '',
+                        duration: '',
+                        description: ''
+                    })
+                },
+                removeExperience(index) {
+                    this.formData.experience.splice(index, 1)
+                },
+                addEducation() {
+                    this.formData.education.push({
+                        institution: '',
+                        degree: '',
+                        year: ''
+                    })
+                },
+                removeEducation(index) {
+                    this.formData.education.splice(index, 1)
+                },
+                async saveResume() {
+                    this.loading = true
+                    try {
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer Jjk9NnYvFbPwegd73HHC2FlbqP63',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                appSlug: 'resume-builder-123456',
+                                action: 'create',
+                                collection: 'resumes',
+                                data: {
+                                    ...this.formData,
+                                    templateId: this.selectedTemplate,
+                                    createdAt: new Date()
+                                }
+                            })
+                        })
+                        const data = await response.json()
+                        if (data.success) {
+                            alert('Resume saved successfully!')
+                            // Here you could add logic to preview/download the resume
+                        }
+                    } catch (error) {
+                        console.error('Error saving resume:', error)
+                        alert('Error saving resume. Please try again.')
+                    } finally {
+                        this.loading = false
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
